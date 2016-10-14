@@ -32,6 +32,7 @@ public abstract class Parser {
 
 	public void runIt() throws IOException
 	{
+		System.out.println("Loading Members");
 		final String members =requestMembers();
 		FileWriter myWriter = new FileWriter(new File("members.json"));
 		myWriter.write(members);
@@ -41,11 +42,15 @@ public abstract class Parser {
 /*		Event myEvent = new Event();
 		myEvent.eventid = 74712965;*/
 		
+		System.out.println("Loading Events");
 		final String events = requestEvents();
 		myWriter = new FileWriter(new File("events.json"));
 		myWriter.write(events);
 		myWriter.close();
+		
+		System.out.println("Parsing Events");
 		parseEvents(events);
+		System.out.println("Writing CSV");
 		String csv = writeCSV();
 		writeCSV(csv);
 	}
@@ -242,6 +247,7 @@ public abstract class Parser {
 	
 	void getAvailability(Event myEvent) throws IOException {
 		
+		System.out.println("Getting Availabiltiy for Event " + myEvent);
 		final String json = 
 				requestEventAvailability(myEvent);
 		

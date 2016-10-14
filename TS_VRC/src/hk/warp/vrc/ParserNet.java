@@ -1,9 +1,12 @@
 package hk.warp.vrc;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -208,11 +211,37 @@ public class ParserNet extends Parser{
 
 	@Override
 	String requestEventAvailability(Event myEvent) {
+		final File myCacheFile;
+		if (myEvent.date.before(new Date()))
+		{
+			myCacheFile = new File("cache/available_"+myEvent.eventid);
+			if (myCacheFile.exists())
+			{
+				try {
+					BufferedReader myReader = new BufferedReader(new FileReader(myCacheFile));
+					String myReturn = myReader.readLine();
+					myReader.close();
+					return myReturn;
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		else
+			myCacheFile=null;
+		
 		try {
 			HttpGet g = new HttpGet("https://api.teamsnap.com/v3/availabilities/search?event_id="+myEvent.eventid);
 			g.addHeader("Content-Type", "application/json");
 			g.addHeader("Authorization", "Bearer " + accessToken);
-			return execute(g);
+			final String myReturn =  execute(g);
+			if (myCacheFile!=null)
+			{
+				FileWriter myWriter = new FileWriter(myCacheFile);
+				myWriter.write(myReturn+"\n");
+				myWriter.close();
+			}
+			return myReturn;
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
