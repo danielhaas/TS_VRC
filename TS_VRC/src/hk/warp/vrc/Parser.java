@@ -32,6 +32,7 @@ public abstract class Parser {
 
 	public void runIt() throws IOException
 	{
+		if (true) return;
 		System.out.println("Loading Members");
 		final String members =requestMembers();
 		FileWriter myWriter = new FileWriter(new File("members.json"));
@@ -189,7 +190,7 @@ public abstract class Parser {
 				
 				JSONObject data = iterator.next();
 				Member myMember = parseMember((JSONArray) data.get("data"));
-				members.put(myMember.memberid, myMember);
+				members.put(myMember.id, myMember);
 			}
 		} catch (ParseException e) {
 			e.printStackTrace();
@@ -205,7 +206,7 @@ public abstract class Parser {
 			final String name = (String) data.get("name");
 			if (name.equals("id"))
 			{
-				member.memberid = (long) data.get("value");
+				member.id = (long) data.get("value");
 			}
 			else if (name.equals("first_name"))
 			{

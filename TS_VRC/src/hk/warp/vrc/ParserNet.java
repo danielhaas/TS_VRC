@@ -10,9 +10,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.http.HttpEntity;
@@ -30,19 +27,14 @@ import org.apache.http.util.EntityUtils;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
-
-import com.google.common.collect.ImmutableMap;
 
 public class ParserNet extends Parser{
-	private Server server = new Server(3000);
+	private Server server;
 
-	private final String clientId;
-	private final String clientSecret;
+	final String clientId;
+	final String clientSecret;
 
-	private String accessToken;
+	String accessToken;
 	private String teamId = "37803";
 	HttpServletResponse theResp;
 	
@@ -58,97 +50,21 @@ public class ParserNet extends Parser{
 	}
 
 	public void startJetty() throws Exception {
-
+		server = new Server(3000);
 		ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
 		context.setContextPath("/");
 		server.setHandler(context);
 
+		final MenuServlet ms = new MenuServlet(clientId, clientSecret);
+		
+		context.addServlet(new ServletHolder(ms),"/");        
+		context.addServlet(new ServletHolder(ms),"/callback");        
 		// map servlets to endpoints
-		context.addServlet(new ServletHolder(new SigninServlet()),"/signin");        
-		context.addServlet(new ServletHolder(new CallbackServlet()),"/callback");        
+		context.addServlet(new ServletHolder(new SigninServlet(this)),"/signin");        
+//		context.addServlet(new ServletHolder(new CallbackServlet(this)),"/callback");        
 
 		server.start();
 		server.join();
-	}
-
-	class SigninServlet extends HttpServlet {
-		@Override
-		protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException,IOException {
-
-			// redirect to google for authorization
-			StringBuilder oauthUrl = new StringBuilder().append("https://auth.teamsnap.com/oauth/authorize")
-					.append("?client_id=").append(clientId) // the client id from the api console registration
-//					.append("&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fcallback") // the servlet that google redirects to after authorization
-					.append("&redirect_uri=http://localhost:3000/callback") // the servlet that google redirects to after authorization
-					.append("&response_type=code")
-//					.append("&scope=openid%20email") // scope is the api permissions we are requesting
-//					
-					
-//					.append("&redirect_uri=http://localhost:3000/callback") // the servlet that google redirects to after authorization
-//					.append("&state=this_can_be_anything_to_help_correlate_the_response%3Dlike_session_id")
-//					.append("&access_type=offline") // here we are asking to access to user's data while they are not signed in
-//					.append("&approval_prompt=force"); // this requires them to verify which account to use, if they are already signed in
-;
-			resp.sendRedirect(oauthUrl.toString());
-		} 
-	}
-
-	class CallbackServlet extends HttpServlet {
-		@Override
-		protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException,IOException {
-			// google redirects with
-			//http://localhost:8089/callback?state=this_can_be_anything_to_help_correlate_the_response%3Dlike_session_id&code=4/ygE-kCdJ_pgwb1mKZq3uaTEWLUBd.slJWq1jM9mcUEnp6UAPFm0F2NQjrgwI&authuser=0&prompt=consent&session_state=a3d1eb134189705e9acf2f573325e6f30dd30ee4..d62c
-
-			// if the user denied access, we get back an error, ex
-			// error=access_denied&state=session%3Dpotatoes
-
-			if (req.getParameter("error") != null) {
-				resp.getWriter().println(req.getParameter("error"));
-				return;
-			}
-
-			// google returns a code that can be exchanged for a access token
-			String code = req.getParameter("code");
-
-			// get the access token by post to Google
-			String body = post("https://auth.teamsnap.com/oauth/token", ImmutableMap.<String,String>builder()
-					.put("client_id", clientId)
-					.put("client_secret", clientSecret)
-					.put("redirect_uri", "http%3A%2F%2Flocalhost%3A3000%2Fcallback")
-					
-//					.put("redirect_uri", "http://localhost:3000/callback")
-					.put("code", code)
-					.put("grant_type", "authorization_code").build());
-
-			// ex. returns
-			//   {
-			//	       "access_token": "ya29.AHES6ZQS-BsKiPxdU_iKChTsaGCYZGcuqhm_A5bef8ksNoU",
-			//	       "token_type": "Bearer",
-			//	       "expires_in": 3600,
-			//	       "id_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjA5ZmE5NmFjZWNkOGQyZWRjZmFiMjk0NDRhOTgyN2UwZmFiODlhYTYifQ.eyJpc3MiOiJhY2NvdW50cy5nb29nbGUuY29tIiwiZW1haWxfdmVyaWZpZWQiOiJ0cnVlIiwiZW1haWwiOiJhbmRyZXcucmFwcEBnbWFpbC5jb20iLCJhdWQiOiI1MDgxNzA4MjE1MDIuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdF9oYXNoIjoieUpVTFp3UjVDX2ZmWmozWkNublJvZyIsInN1YiI6IjExODM4NTYyMDEzNDczMjQzMTYzOSIsImF6cCI6IjUwODE3MDgyMTUwMi5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbSIsImlhdCI6MTM4Mjc0MjAzNSwiZXhwIjoxMzgyNzQ1OTM1fQ.Va3kePMh1FlhT1QBdLGgjuaiI3pM9xv9zWGMA9cbbzdr6Tkdy9E-8kHqrFg7cRiQkKt4OKp3M9H60Acw_H15sV6MiOah4vhJcxt0l4-08-A84inI4rsnFn5hp8b-dJKVyxw1Dj1tocgwnYI03czUV3cVqt9wptG34vTEcV3dsU8",
-			//	       "refresh_token": "1/Hc1oTSLuw7NMc3qSQMTNqN6MlmgVafc78IZaGhwYS-o"
-			//   }
-
-			JSONObject jsonObject = null;
-
-			// get the access token from json and request info from Google
-			try {
-				jsonObject = (JSONObject) new JSONParser().parse(body);
-			} catch (ParseException e) {
-				throw new RuntimeException("Unable to parse json " + body);
-			}
-
-			// google tokens expire after an hour, but since we requested offline access we can get a new token without user involvement via the refresh token
-			accessToken = (String) jsonObject.get("access_token");
-
-			// you may want to store the access token in session
-			req.getSession().setAttribute("access_token", accessToken);
-
-			theResp = resp;
-
-			runIt();
-			
-		} 
 	}
 
 	// makes a GET request to url and returns body as a string
