@@ -20,5 +20,12 @@ class Event
 	public String toString() {
 		return "Event [eventid=" + eventid + ", name=" + name + ", members=" + members + ", date=" + date + "]";
 	}
+
+	public boolean hasMemberAttended(Member member_) {
+		for (Member member : members) {
+			if (member.id== member_.id) return true;
+		}
+		return false;
+	}
 	
 }

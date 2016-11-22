@@ -109,6 +109,10 @@ public class BaseServlet extends HttpServlet{
 		return true;
 	}
 	
+	void printCSVHeader(HttpServletResponse resp)  {
+		resp.setContentType("text/csv;charset=utf-8");
+	}
+	
 	void printFooter(HttpServletResponse resp) throws IOException {
 		resp.getWriter().append("<p><a href=\"http://localhost:3000/\">load menu</a> " + new SimpleDateFormat().format(new Date()));
 		resp.getWriter().append("</body></html>");
