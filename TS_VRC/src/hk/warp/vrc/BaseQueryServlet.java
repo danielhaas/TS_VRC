@@ -33,6 +33,14 @@ public class BaseQueryServlet extends BaseServlet{
 		return f.members;
 	}
 	
+	public void requestMemberEmails(String accessToken, Member member) {
+		String json = request(accessToken, "member_email_addresses", "member_id=" + member.id);
+		MemberEmailFunction f = new MemberEmailFunction(false, member);
+		parse(json, f);
+	}
+
+
+	
 	List<Event> requestEvents(String accessToken, Team aTeam, List<Member> members, boolean past, boolean future) {
 		String json = request(accessToken, "events", "team_id=" + aTeam.id);
 		EventFunction f = new EventFunction(false);
@@ -157,6 +165,7 @@ public class BaseQueryServlet extends BaseServlet{
 			JSONObject jsonObject = (JSONObject) new JSONParser().parse(json);
 			JSONObject collection = (JSONObject) jsonObject.get("collection");
 			JSONArray items = (JSONArray) collection.get("items");
+			if (items == null) return;
 			Iterator<JSONObject> iterator = items.iterator();
 			while (iterator.hasNext()) {
 				
@@ -234,8 +243,52 @@ public class BaseQueryServlet extends BaseServlet{
 					String x = (String) data.get("value");
 					member.female = x==null || x.equals("Female");
 				}
+				else if (key.equals("T Shirt Size"))
+				{
+					member.shirtsize = (String) data.get("value");
+				}
+				else if (key.equals("is_non_player"))
+				{
+					Boolean x =  (Boolean) data.get("value");
+					member.player = x==null || !x.booleanValue();
+				}
+				
+				
 			}
 			members.add(member);
+			return onlyOne;
+		}	
+	}
+	
+	class MemberEmailFunction implements Function
+	{
+		final boolean onlyOne;
+		final Member member;
+		MemberEmailFunction(boolean onlyOne_, Member aMember)
+		{
+			onlyOne = onlyOne_;
+			member = aMember;
+		}
+		
+		
+		@Override
+		public boolean handle(JSONArray jsonArray) {
+			Iterator<JSONObject> iterator = jsonArray.iterator();
+			while (iterator.hasNext()) {
+				
+				final JSONObject data = iterator.next();
+				final String key = (String) data.get("name");
+				
+				if (key.equals("email"))
+				{
+					final String email = (String) data.get("value");
+					if (member.emails==null) member.emails = new  ArrayList<String>();
+					if (!member.emails.contains(email))
+					
+					member.emails.add(email);
+				}
+				
+			}
 			return onlyOne;
 		}	
 	}
@@ -317,6 +370,61 @@ public class BaseQueryServlet extends BaseServlet{
 		TeamFunction f = new TeamFunction();
 		parse(json, f);
 		return f.teams;
+	}
+	
+	void getCustomFields(String accessToken, List<Member> members){
+		final String json= request(accessToken, "custom_data", "custom_field_id=431124");
+//		final String json= request(accessToken, "custom_fields/431124", "member_id="+1871589);
+		
+		CustomFunction f = new CustomFunction(members);
+		parse(json, f);
+/*		TeamFunction f = new TeamFunction();
+		parse(json, f);*/
+	}
+
+	
+	
+	class CustomFunction implements Function
+	{
+		List<Member> members;
+		CustomFunction(List<Member> aMembers)
+		{
+			members = aMembers;
+		}
+		
+		
+		@Override
+		public boolean handle(JSONArray jsonArray) {
+			Member member=null;
+			String shirtsize=null;
+			Iterator<JSONObject> iterator = jsonArray.iterator();
+			while (iterator.hasNext()) {
+				
+				final JSONObject data = iterator.next();
+				final String key = (String) data.get("name");
+				
+				if (key.equals("member_id"))
+				{
+					long mid = (long) data.get("value");
+					for (Member member_ : members) {
+						if (member_.id== mid)
+						{
+							member = member_;
+						}
+					}
+					if (member!=null && shirtsize!=null)
+						member.shirtsize = shirtsize;
+					
+				}
+				else if (key.equals("value"))
+				{
+					shirtsize =(String) data.get("value");
+					if (member!=null)
+						member.shirtsize = shirtsize;
+				}
+			}
+			return false;
+		}	
 	}
 	
 

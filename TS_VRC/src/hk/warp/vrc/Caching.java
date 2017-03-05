@@ -12,6 +12,8 @@ public class Caching {
 	public String checkCache(String collection, String search) throws IOException {
 		final File myCacheFile = getCacheFile(collection, search);
 		if (!myCacheFile.exists()) return null;
+		
+		if (System.currentTimeMillis() - myCacheFile.lastModified()> 1000 *60 *60 *24) return null;
 
 		return readFile(myCacheFile);
 	}

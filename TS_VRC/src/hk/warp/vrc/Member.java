@@ -15,6 +15,10 @@ class Member
 	public String last_name;
 	public boolean female;
 	public int last3;
+	boolean player;
+	String shirtsize;
+	List<String> emails;
+	
 	public void addEvent(Event anEvent) {
 		events.add(anEvent);
 	}
@@ -22,6 +26,14 @@ class Member
 	public String toString() {
 		return "Member [memberid=" + id + ", first_name=" + first_name + ", last_name="
 				+ last_name + ", female=" + female + "]";
+	}
+	public boolean isPlayer() {
+		return player;
+	}
+	
+	public List<String> getMails()
+	{
+		return emails;
 	}
 	
 	
