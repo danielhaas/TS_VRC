@@ -10,6 +10,9 @@ class Event
 	String name;
 	
 	List<Member> members = new ArrayList<>();
+	List<Member> no_shows = new ArrayList<>();
+	List<Member> late = new ArrayList<>();
+	
 	public Date date;
 
 	public void addMember(Member member, String updated) {
@@ -26,6 +29,14 @@ class Event
 			if (member.id== member_.id) return true;
 		}
 		return false;
+	}
+
+	public void addNoShow(Member member) {
+		no_shows.add(member);
+	}
+
+	public void addLateCancel(Member member) {
+		late.add(member);
 	}
 	
 }

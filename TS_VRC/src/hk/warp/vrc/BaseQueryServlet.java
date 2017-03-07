@@ -18,7 +18,7 @@ public class BaseQueryServlet extends BaseServlet{
 	private boolean own_caching = true;
 
 	final Caching caching;
-	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+	public SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
 
 	public BaseQueryServlet(String clientId_, String client_secret_) {
@@ -70,6 +70,8 @@ public class BaseQueryServlet extends BaseServlet{
 				JSONArray memberdata = (JSONArray) data.get("data");
 
 				boolean myWasGoing = false;
+				boolean noShow = false;
+				boolean late = false;
 				long memberid =0;
 				String updated="";
 				
@@ -90,16 +92,75 @@ public class BaseQueryServlet extends BaseServlet{
 					else if (x.equals("updated_at"))
 					{
 						updated = (String) data2.get("value");
+
+					}
+					else if (x.equals("notes"))
+					{
+						String v = (String) data2.get("value");
+						if (v!=null){
+							if (v.equalsIgnoreCase("no show"))
+							{
+								noShow = true;
+							}
+							else if (v.toLowerCase().startsWith("late can"))
+							{
+								late = true;							
+							}
+						}
+					}
+
+				}
+				Date myDate=null;
+				if (updated!=null)
+				{
+					try {
+						myDate = sdf.parse(updated);
+					} catch (java.text.ParseException e) {
+						e.printStackTrace();
 					}
 				}
-				
-				if (myWasGoing)
+
+				if (noShow)
 				{
 					Member member = getMember(members, memberid);
-					
+					anEvent.addNoShow(member);
+					member.addEventNoShow(anEvent, myDate);
+
+				}
+				else if (late)
+				{
+					Member member = getMember(members, memberid);
+					anEvent.addLateCancel(member);					
+					member.addEventLateCancel(anEvent, myDate);
+				}
+				else if (myWasGoing)
+				{
+					Member member = getMember(members, memberid);
+
 					anEvent.addMember(member, updated);
 					member.addEvent(anEvent);
-				}				
+				}
+				else
+				{
+					if (updated!=null)
+					{
+						long time = anEvent.date.getTime() - myDate.getTime();
+
+						if (time<0)
+						{
+							Member member = getMember(members, memberid);
+							anEvent.addNoShow(member);
+							member.addEventNoShow(anEvent, myDate);
+						}
+						else if (time < 10 *60*60*1000)
+						{
+							Member member = getMember(members, memberid);
+							anEvent.addLateCancel(member);					
+							member.addEventLateCancel(anEvent, myDate);								
+						}
+
+					}
+				}
 			}
 			System.out.println();
 		} catch (ParseException e) {
@@ -107,8 +168,8 @@ public class BaseQueryServlet extends BaseServlet{
 		}
 	}
 
-	
-	
+
+
 	private Member getMember(List<Member> members, long memberid) {
 		for (Member member : members) {
 			if (member.id == memberid) return member;

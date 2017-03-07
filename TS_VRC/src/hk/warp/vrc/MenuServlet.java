@@ -15,7 +15,7 @@ import javax.servlet.http.HttpServletResponse;
 
 public class MenuServlet extends BaseQueryServlet{
 
-
+	List<Action> actions = Actions.getActions();
 
 	public MenuServlet(String clientId_, String client_secret_) {
 		super(clientId_, client_secret_);
@@ -151,10 +151,13 @@ public class MenuServlet extends BaseQueryServlet{
 				out.append("(" );
 				out.append(myTeam.name);
 				out.append("),<br><br>\n" );
+				
 
-				writeLink(req, resp, "menu", "Show Menu");
-				writeLink(req, resp, "members", "List all members");
-				writeLink(req, resp, "shirts", "List all members with Shirts");
+				for (Action action : actions) {
+					writeLink(req, resp, action.getShort(), action.getDescr());
+				}
+				
+				
 				writeLink(req, resp, "members_mails", "List all active members Email");
 				writeLink(req, resp, "attendance", "Show attendance");
 				writeLink(req, resp, "attendance2", "Show attendance (Female, last 3 months)");
@@ -166,78 +169,26 @@ public class MenuServlet extends BaseQueryServlet{
 
 //				String myNextAction = (String) req.getSession().getAttribute("next_action");
 
+				
+				
+				
 				if (myNextAction!=null)
 				{
-					if (myNextAction.equals("members"))
-					{
-						out.append("<b>Listing members of "+myTeam.name+"</b><br>\n");
-
-						List<Member> members = requestMembers(accessToken, myTeam);
-
-						out.append("<table>\n");
-
-						for (Member member : members) {
-							out.append("<tr><td>");
-							out.append(member.first_name);
-							out.append("</td>\n<td>");
-							out.append(member.last_name);
-							out.append("</td>\n<td>");
-							out.append(member.female ? "female" : "male");
-							out.append("</td>\n</tr>\n");
+					boolean found = false;
+					for (Action action : actions) {
+						if (action.getShort().equals(myNextAction))
+						{
+							action.process(accessToken, out, myTeam, this);
 							
+							found = true;
+							break;
 						}
-						out.append("</table>\n");
-
 					}
-					else if (myNextAction.equals("shirts"))
+					
+					if (found)
 					{
-						out.append("<b>Listing members of "+myTeam.name+"</b><br>\n");
-
-						List<Member> members = requestMembers(accessToken, myTeam);
-						getCustomFields(accessToken, members);
-
-						Collections.sort(members, new Comparator<Member>() {
-
-							@Override
-							public int compare(Member o1, Member o2) {
-								final int x = 
-										o1.first_name==null?0:
-										o1.first_name.compareTo(o2.first_name);
-								if (x!=0) return x;
-								return o1.last_name.compareTo(o2.last_name);
-							}
-						});
-
-						out.append("<table>\n");
-
-						for (Member member : members) {
-							requestMemberEmails(accessToken, member);
-							out.append("<tr><td>");
-							out.append(member.first_name);
-							out.append("</td>\n<td>");
-							out.append(member.last_name);
-							out.append("</td>\n<td>");
-							out.append(member.female ? "female" : "male");
-							out.append("</td>\n<td>");
-							out.append(member.isPlayer() ? "Player" : "Non Player");
-							out.append("</td>\n<td>");
-							if (member!=null && member.getMails()!=null)
-							{
-								for (String email : member.getMails()) {
-
-									out.append("<a href=\"mailto:"+email+"\">"+email + "</a><br>");
-								}
-							}
-
-							out.append("</td>\n<td>");
-							out.append(member.shirtsize);
-							out.append("</td>\n</tr>\n");
-							
-						}
-						out.append("</table>\n");
-
+						// np
 					}
-										
 					else if (myNextAction.equals("members_mails"))
 					{
 						int counter =0;
@@ -668,6 +619,26 @@ public class MenuServlet extends BaseQueryServlet{
 			printFooter(resp);
 		}
 
+	}
+
+	protected void doMembers(String accessToken, Team myTeam, final PrintWriter out) {
+		out.append("<b>Listing members of "+myTeam.name+"</b><br>\n");
+
+		List<Member> members = requestMembers(accessToken, myTeam);
+
+		out.append("<table>\n");
+
+		for (Member member : members) {
+			out.append("<tr><td>");
+			out.append(member.first_name);
+			out.append("</td>\n<td>");
+			out.append(member.last_name);
+			out.append("</td>\n<td>");
+			out.append(member.female ? "female" : "male");
+			out.append("</td>\n</tr>\n");
+			
+		}
+		out.append("</table>\n");
 	}
 	
 	
