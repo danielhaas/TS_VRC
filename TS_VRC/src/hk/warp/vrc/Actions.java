@@ -13,6 +13,8 @@ public class Actions {
 		actions.add(new Action_Member());
 		actions.add(new Action_Shirts());
 		actions.add(new Action_No_show());
+		actions.add(new Action_AttendanceSessions());
+		actions.add(new Action_AttendanceSessionsWeekGuys());
 		return actions;
 	}
 }
